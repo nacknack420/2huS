@@ -1,0 +1,2962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bullet Hell Roguelike</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #1a1a2e;
+            font-family: monospace;
+        }
+        #gameContainer {
+            text-align: center;
+        }
+        canvas {
+            border: 3px solid #16213e;
+            background: #0f0f1e;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        #info {
+            color: #eee;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        #statsPanel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(22, 33, 62, 0.9);
+            border: 2px solid #4ecdc4;
+            padding: 15px;
+            color: #eee;
+            font-size: 12px;
+            border-radius: 5px;
+            min-width: 200px;
+            transition: all 0.3s ease;
+        }
+        #statsPanel.collapsed {
+            padding: 8px 15px;
+            min-width: auto;
+        }
+        #statsPanel.collapsed .panel-content {
+            display: none;
+        }
+        #statsPanel h3 {
+            margin: 0 0 10px 0;
+            color: #4ecdc4;
+            font-size: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        #statsPanel.collapsed h3 {
+            margin: 0;
+        }
+        .panel-toggle {
+            font-size: 14px;
+            color: #4ecdc4;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+        .panel-toggle:hover {
+            color: #fff;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+        }
+        .stat-name {
+            color: #aaa;
+        }
+        .stat-value {
+            color: #fff;
+            font-weight: bold;
+        }
+        .stat-category {
+            color: #ffeb3b;
+            font-size: 11px;
+            margin-top: 8px;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+        }
+        #healthBar {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border: 1px solid #666;
+            margin: 5px 0;
+            position: relative;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        #healthFill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ff8e8e);
+            transition: width 0.3s;
+        }
+        #healthText {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        #debugPanel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(22, 33, 62, 0.9);
+            border: 2px solid #ff6b9d;
+            padding: 15px;
+            color: #eee;
+            font-size: 12px;
+            border-radius: 5px;
+            max-width: 250px;
+            max-height: 80vh;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+        #debugPanel.collapsed {
+            padding: 8px 15px;
+            max-width: auto;
+            overflow-y: visible;
+        }
+        #debugPanel.collapsed .panel-content {
+            display: none;
+        }
+        #debugPanel h3 {
+            margin: 0 0 10px 0;
+            color: #ff6b9d;
+            font-size: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        #debugPanel.collapsed h3 {
+            margin: 0;
+        }
+        .enemy-category {
+            color: #ffd93d;
+            font-size: 11px;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        .debug-btn {
+            width: 100%;
+            padding: 6px;
+            margin: 3px 0;
+            background: #1a1a2e;
+            border: 1px solid #4ecdc4;
+            color: #4ecdc4;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+        .debug-btn:hover {
+            background: #4ecdc4;
+            color: #1a1a2e;
+        }
+        .debug-btn.kill-all {
+            background: #e63946;
+            border-color: #e63946;
+            color: white;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .debug-btn.kill-all:hover {
+            background: #ff1744;
+        }
+        #spellCardMeter {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(22, 33, 62, 0.95);
+            border: 3px solid #ffd60a;
+            padding: 12px 20px;
+            border-radius: 8px;
+            min-width: 300px;
+            display: none;
+        }
+        #spellCardBar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 8px;
+            background: rgba(26, 26, 46, 0.8);
+            border: 2px solid #ffd60a;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        #spellCardFill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd60a, #ffed4e);
+            width: 0%;
+            transition: width 0.1s;
+            box-shadow: 0 0 10px #ffd60a;
+        }
+        #spellCardIcon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #ffd60a, #ffed4e);
+            border: 3px solid #ffd60a;
+            border-radius: 50%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            animation: pulse 1s infinite;
+            cursor: pointer;
+            box-shadow: 0 0 20px #ffd60a;
+        }
+        #spellCardIcon:hover {
+            transform: scale(1.1);
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        #xpBar {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            background: rgba(26, 26, 46, 0.9);
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            padding: 8px;
+        }
+        #xpBarInner {
+            width: 100%;
+            height: 20px;
+            background: #1a1a2e;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid #00ff88;
+        }
+        #xpBarFill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00ffcc);
+            width: 0%;
+            transition: width 0.3s;
+            box-shadow: 0 0 10px #00ff88;
+        }
+        #xpBarText {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px black;
+        }
+        #levelText {
+            text-align: center;
+            color: #00ff88;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        #spellCardMeter h4 {
+            margin: 0 0 8px 0;
+            color: #ffd60a;
+            font-size: 14px;
+            text-align: center;
+        }
+        #spellChargeBar {
+            width: 100%;
+            height: 25px;
+            background: #1a1a2e;
+            border: 2px solid #ffd60a;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+        #spellChargeFill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd60a, #ffed4e);
+            transition: width 0.1s;
+            box-shadow: 0 0 10px #ffd60a;
+        }
+        #spellChargeText {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            line-height: 25px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px black;
+        }
+        #spellUses {
+            text-align: center;
+            color: #aaa;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+        #upgradeUI {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        #upgradeChoices {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 900px;
+        }
+        .upgrade-choice {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 3px solid #4ecdc4;
+            border-radius: 10px;
+            padding: 25px;
+            width: 250px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+        .upgrade-choice.player-upgrade {
+            border-color: #4ecdc4;
+        }
+        .upgrade-choice.player-upgrade:hover {
+            border-color: #6ef7e7;
+            box-shadow: 0 10px 30px rgba(78, 205, 196, 0.5);
+        }
+        .upgrade-choice.weapon-upgrade {
+            border-color: #ff6b9d;
+        }
+        .upgrade-choice.weapon-upgrade:hover {
+            border-color: #ff8ab3;
+            box-shadow: 0 10px 30px rgba(255, 107, 157, 0.5);
+        }
+        .upgrade-choice.weapon-specific-upgrade {
+            border-color: #9d4edd;
+        }
+        .upgrade-choice.weapon-specific-upgrade:hover {
+            border-color: #b86ef0;
+            box-shadow: 0 10px 30px rgba(157, 78, 221, 0.5);
+        }
+        .upgrade-choice.spell-upgrade {
+            border-color: #ffd60a;
+        }
+        .upgrade-choice.spell-upgrade:hover {
+            border-color: #ffe85c;
+            box-shadow: 0 10px 30px rgba(255, 214, 10, 0.5);
+        }
+        .upgrade-choice:hover {
+            transform: translateY(-5px);
+        }
+        .upgrade-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .player-upgrade .upgrade-name {
+            color: #4ecdc4;
+        }
+        .weapon-upgrade .upgrade-name {
+            color: #ff6b9d;
+        }
+        .weapon-specific-upgrade .upgrade-name {
+            color: #9d4edd;
+        }
+        .spell-upgrade .upgrade-name {
+            color: #ffd60a;
+        }
+        .unlock-upgrade {
+            border-color: #00ff88;
+        }
+        .unlock-upgrade:hover {
+            border-color: #4dffaa;
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.5);
+        }
+        .unlock-upgrade .upgrade-name {
+            color: #00ff88;
+        }
+        #statEditorPanel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(22, 33, 62, 0.9);
+            border: 2px solid #ff6b35;
+            padding: 15px;
+            color: #eee;
+            font-size: 11px;
+            border-radius: 5px;
+            max-width: 250px;
+            max-height: 70vh;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+        #statEditorPanel.collapsed {
+            padding: 8px 15px;
+            max-width: auto;
+            overflow-y: visible;
+        }
+        #statEditorPanel.collapsed .panel-content {
+            display: none;
+        }
+        #statEditorPanel h3 {
+            margin: 0 0 10px 0;
+            color: #ff6b35;
+            font-size: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        #statEditorPanel.collapsed h3 {
+            margin: 0;
+        }
+        .stat-editor-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 5px 0;
+            padding: 3px;
+        }
+        .stat-editor-label {
+            color: #aaa;
+            font-size: 11px;
+            flex: 1;
+        }
+        .stat-editor-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        .stat-editor-value {
+            color: #fff;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: center;
+            font-size: 11px;
+        }
+        .stat-btn {
+            background: #1a1a2e;
+            border: 1px solid #ff6b35;
+            color: #ff6b35;
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .stat-btn:hover {
+            background: #ff6b35;
+            color: #1a1a2e;
+        }
+        .stat-editor-category {
+            color: #ff6b35;
+            font-size: 10px;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .weapon-editor-section {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #333;
+        }
+        .weapon-editor-title {
+            color: #9d4edd;
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        #weaponUpgradePanel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(22, 33, 62, 0.9);
+            border: 2px solid #9d4edd;
+            padding: 15px;
+            color: #eee;
+            font-size: 11px;
+            border-radius: 5px;
+            max-width: 280px;
+            max-height: 70vh;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+        #weaponUpgradePanel.collapsed {
+            padding: 8px 15px;
+            overflow-y: visible;
+        }
+        #weaponUpgradePanel.collapsed .panel-content {
+            display: none;
+        }
+        #weaponUpgradePanel h3 {
+            margin: 0 0 10px 0;
+            color: #9d4edd;
+            font-size: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        #weaponUpgradePanel.collapsed h3 {
+            margin: 0;
+        }
+        .upgrade-editor-section {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+        .upgrade-editor-section:last-child {
+            border-bottom: none;
+        }
+        .upgrade-editor-weapon-title {
+            color: #9d4edd;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .upgrade-editor-upgrade {
+            margin: 4px 0;
+            font-size: 10px;
+        }
+        .upgrade-type {
+            color: #ffd60a;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+        .upgrade-description {
+            color: #ddd;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="xpBar">
+        <div id="xpBarInner">
+            <div id="xpBarFill"></div>
+            <div id="xpBarText">0 / 10</div>
+        </div>
+        <div id="levelText">Level 1</div>
+    </div>
+    
+    <div id="statsPanel">
+        <h3 onclick="togglePanel('statsPanel')">
+            Player Stats
+            <span class="panel-toggle">−</span>
+        </h3>
+        <div class="panel-content">
+            <div id="healthBar">
+                <div id="healthFill"></div>
+                <div id="healthText">100 / 100</div>
+            </div>
+            <div class="stat-category">Movement</div>
+            <div class="stat-row"><span class="stat-name">Move Speed:</span><span class="stat-value" id="stat-moveSpeed">0</span></div>
+            <div class="stat-row"><span class="stat-name">Focus Speed:</span><span class="stat-value" id="stat-focusSpeed">0</span></div>
+            
+            <div class="stat-category">Combat</div>
+            <div class="stat-row"><span class="stat-name">Damage:</span><span class="stat-value" id="stat-damage">0</span></div>
+            <div class="stat-row"><span class="stat-name">Attack Speed:</span><span class="stat-value" id="stat-attackSpeed">0</span></div>
+            <div class="stat-row"><span class="stat-name">Projectiles:</span><span class="stat-value" id="stat-projectileCount">0</span></div>
+            
+            <div class="stat-category">Defense</div>
+            <div class="stat-row"><span class="stat-name">Armor:</span><span class="stat-value" id="stat-armor">0</span></div>
+            <div class="stat-row"><span class="stat-name">Health Regen:</span><span class="stat-value" id="stat-healthRegen">0</span></div>
+            
+            <div class="stat-category">Utility</div>
+            <div class="stat-row"><span class="stat-name">Pickup Range:</span><span class="stat-value" id="stat-pickupRange">0</span></div>
+            <div class="stat-row"><span class="stat-name">Crit Chance:</span><span class="stat-value" id="stat-critChance">0</span></div>
+            
+            <div class="stat-category">Spell Card</div>
+            <div class="stat-row"><span class="stat-name">Damage:</span><span class="stat-value" id="stat-spellDamage">0</span></div>
+            <div class="stat-row"><span class="stat-name">Charges:</span><span class="stat-value" id="stat-spellUses">0 / 0</span></div>
+        </div>
+    </div>
+    
+    <div id="debugPanel">
+        <h3 onclick="togglePanel('debugPanel')">
+            Debug Panel
+            <span class="panel-toggle">−</span>
+        </h3>
+        <div class="panel-content">
+            <div style="color: #aaa; font-size: 10px; margin-bottom: 10px;">
+                Enemies: <span id="enemyCount">0</span><br>
+                Bullets: <span id="bulletCount">0</span>
+            </div>
+            
+            <div class="enemy-category">Basic Enemies</div>
+            <button class="debug-btn" onclick="spawnEnemy('DRIFTER', GAME_WIDTH/2, 50)">Spawn Drifter</button>
+            <button class="debug-btn" onclick="spawnEnemy('RUSHER', GAME_WIDTH/2, 50)">Spawn Rusher</button>
+            <button class="debug-btn" onclick="spawnEnemy('ORBITER', GAME_WIDTH/2, 50)">Spawn Orbiter</button>
+            <button class="debug-btn" onclick="spawnEnemy('WANDERER', GAME_WIDTH/2, 50)">Spawn Wanderer</button>
+            
+            <div class="enemy-category">Shooters</div>
+            <button class="debug-btn" onclick="spawnEnemy('SNIPER', GAME_WIDTH/2, 50)">Spawn Sniper</button>
+            <button class="debug-btn" onclick="spawnEnemy('SPRAYER', GAME_WIDTH/2, 50)">Spawn Sprayer</button>
+            <button class="debug-btn" onclick="spawnEnemy('SPIRAL_SHOOTER', GAME_WIDTH/2, 50)">Spawn Spiral Shooter</button>
+            <button class="debug-btn" onclick="spawnEnemy('BURST_SHOOTER', GAME_WIDTH/2, 50)">Spawn Burst Shooter</button>
+            
+            <div class="enemy-category">Elite/Special</div>
+            <button class="debug-btn" onclick="spawnEnemy('TANK', GAME_WIDTH/2, 50)">Spawn Tank</button>
+            <button class="debug-btn" onclick="spawnEnemy('SPLITTER', GAME_WIDTH/2, 50)">Spawn Splitter</button>
+            <button class="debug-btn" onclick="spawnEnemy('SUMMONER', GAME_WIDTH/2, 50)">Spawn Summoner</button>
+            <button class="debug-btn" onclick="spawnEnemy('TELEPORTER', GAME_WIDTH/2, 50)">Spawn Teleporter</button>
+            
+            <div class="enemy-category">Boss-Tier</div>
+            <button class="debug-btn" onclick="spawnEnemy('MINI_BOSS', GAME_WIDTH/2, 100)">Spawn Mini Boss</button>
+            
+            <div class="enemy-category">Weapons</div>
+            <button class="debug-btn" onclick="addWeapon('SHURIKEN')">Add Shuriken</button>
+            <button class="debug-btn" onclick="addWeapon('MAGIC_MISSILE')">Add Magic Missile</button>
+            <button class="debug-btn" onclick="addWeapon('LIGHTNING')">Add Lightning</button>
+            <button class="debug-btn" onclick="addWeapon('FIREBALL')">Add Fireball</button>
+            <button class="debug-btn" onclick="addWeapon('ORBIT')">Add Orbit</button>
+            <button class="debug-btn" onclick="addWeapon('LASER')">Add Laser</button>
+            
+            <div class="enemy-category">Character</div>
+            <button class="debug-btn" onclick="showUpgradeUI()">Show Upgrades</button>
+            <button class="debug-btn" onclick="resetCharacter()">Reset Character</button>
+            <button class="debug-btn" onclick="toggleDummyEnemy()" id="dummyToggleBtn">Toggle Dummy Enemy</button>
+            
+            <button class="debug-btn kill-all" onclick="killAllEnemies()">KILL ALL ENEMIES</button>
+            <button class="debug-btn kill-all" onclick="clearAllBullets()">CLEAR ALL BULLETS</button>
+        </div>
+    </div>
+    
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="info">
+            Use WASD or Arrow Keys to move | Hold Shift to focus | SPACE to use spell card
+        </div>
+    </div>
+    
+    <div id="spellCardBar">
+        <div id="spellCardFill"></div>
+    </div>
+    
+    <div id="spellCardIcon" onclick="activateSpellCard()">⭐</div>
+    
+    <div id="upgradeUI">
+        <div id="upgradeChoices"></div>
+    </div>
+    
+    <div id="statEditorPanel">
+        <h3 onclick="togglePanel('statEditorPanel')">
+            Stat Editor
+            <span class="panel-toggle">−</span>
+        </h3>
+        <div class="panel-content" id="statEditorContent">
+            <!-- Will be populated by JavaScript -->
+        </div>
+    </div>
+    
+    <div id="weaponUpgradePanel">
+        <h3 onclick="togglePanel('weaponUpgradePanel')">
+            Weapon Upgrades
+            <span class="panel-toggle">−</span>
+        </h3>
+        <div class="panel-content" id="weaponUpgradeContent">
+            <!-- Will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game state
+        let isPaused = false;
+
+        // Panel toggle function
+        function togglePanel(panelId) {
+            const panel = document.getElementById(panelId);
+            const toggle = panel.querySelector('.panel-toggle');
+            
+            if (panel.classList.contains('collapsed')) {
+                panel.classList.remove('collapsed');
+                toggle.textContent = '−';
+            } else {
+                panel.classList.add('collapsed');
+                toggle.textContent = '+';
+            }
+        }
+
+        // Game constants
+        const GAME_WIDTH = canvas.width;
+        const GAME_HEIGHT = canvas.height;
+        const PLAYER_SPEED = 4;
+        const PLAYER_FOCUS_SPEED = 2;
+        const PLAYER_RADIUS = 12;
+        const HITBOX_RADIUS = 8;
+        const GRAZE_HITBOX_RADIUS = 4;
+
+        // Player object with comprehensive stats system
+        const player = {
+            // Position and rendering
+            x: GAME_WIDTH / 2,
+            y: GAME_HEIGHT / 2,
+            radius: PLAYER_RADIUS,
+            hitboxRadius: HITBOX_RADIUS,
+            vx: 0,
+            vy: 0,
+            color: '#4ecdc4',
+            hitboxColor: '#ff6b6b',
+            grazeHitboxColor: '#ffeb3b',
+            isGrazing: false,
+            isMoving: false,
+            
+            // Base stats (starting values)
+            baseStats: {
+                // Movement
+                moveSpeed: 4,
+                focusSpeed: 2,
+                
+                // Combat
+                attackSpeed: 1.0,        // attacks per second multiplier
+                damage: 10,
+                projectileCount: 1,
+                range: 300,
+                knockback: 5,
+                
+                // Defense
+                maxHealth: 100,
+                healthRegen: 0,          // HP per second
+                armor: 0,                // damage reduction %
+                iFrames: 0.5,            // invincibility duration after hit (seconds)
+                
+                // Utility
+                luck: 1.0,               // multiplier for drops/crits
+                pickupRange: 50,
+                xpGain: 1.0,             // XP multiplier
+                grazeBonus: 1.0,         // graze reward multiplier
+                
+                // Special
+                critChance: 0.05,        // 5% base crit chance
+                critDamage: 1.5,         // 150% damage on crit
+                areaSize: 1.0,           // AOE multiplier
+                cooldownReduction: 0     // % cooldown reduction
+            },
+            
+            // Current stats (modified by upgrades)
+            stats: {},
+            
+            // Current state
+            health: 100,
+            isInvulnerable: false,
+            invulnerabilityTimer: 0,
+            
+            // Initialize current stats from base stats
+            initStats: function() {
+                this.stats = JSON.parse(JSON.stringify(this.baseStats));
+                this.health = this.stats.maxHealth;
+            },
+            
+            // Method to upgrade a stat
+            upgradeStat: function(statName, amount, isMultiplier = false) {
+                if (this.stats.hasOwnProperty(statName)) {
+                    if (isMultiplier) {
+                        this.stats[statName] *= amount;
+                    } else {
+                        this.stats[statName] += amount;
+                    }
+                    console.log(`${statName} upgraded to ${this.stats[statName]}`);
+                }
+            },
+            
+            // Method to take damage
+            takeDamage: function(damage) {
+                if (this.isInvulnerable) return false;
+                
+                const actualDamage = Math.max(1, damage * (1 - this.stats.armor / 100));
+                this.health -= actualDamage;
+                this.isInvulnerable = true;
+                this.invulnerabilityTimer = this.stats.iFrames;
+                
+                if (this.health <= 0) {
+                    this.health = 0;
+                    // Handle death later
+                }
+                return true;
+            },
+            
+            // Method to heal
+            heal: function(amount) {
+                this.health = Math.min(this.health + amount, this.stats.maxHealth);
+            }
+        };
+        
+        // Initialize player stats
+        player.initStats();
+
+        // Enemy system
+        const enemies = [];
+        let enemyIdCounter = 0;
+        let dummyEnemy = null;
+        let dummyEnemyEnabled = false;
+
+        // Bullet system
+        const bullets = [];
+        let bulletIdCounter = 0;
+
+        // Player weapon system
+        const playerWeapons = [];
+        const playerProjectiles = [];
+
+        // XP and leveling system
+        const xpOrbs = [];
+        let playerLevel = 1;
+        let playerXP = 0;
+        let xpToNextLevel = 10; // XP needed for level 2
+
+        // Calculate XP needed for next level (scales up)
+        function getXPForLevel(level) {
+            return Math.floor(10 * Math.pow(1.5, level - 1));
+        }
+
+        // Create XP orb
+        function createXPOrb(x, y, value) {
+            return {
+                x: x,
+                y: y,
+                value: value,
+                radius: 5,
+                color: '#00ff88',
+                lifetime: 10.0, // despawn after 10 seconds
+                magnetized: false
+            };
+        }
+
+        // Spawn XP orb
+        function spawnXPOrb(x, y, value) {
+            xpOrbs.push(createXPOrb(x, y, value));
+        }
+
+        // Update XP orbs
+        function updateXPOrbs() {
+            for (let i = xpOrbs.length - 1; i >= 0; i--) {
+                const orb = xpOrbs[i];
+                
+                // Check distance to player
+                const dx = player.x - orb.x;
+                const dy = player.y - orb.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                // Magnetize if within pickup range
+                if (dist < player.stats.pickupRange) {
+                    orb.magnetized = true;
+                }
+                
+                // Move towards player if magnetized
+                if (orb.magnetized) {
+                    const speed = 8;
+                    const angle = Math.atan2(dy, dx);
+                    orb.x += Math.cos(angle) * speed;
+                    orb.y += Math.sin(angle) * speed;
+                    
+                    // Collect if touching player
+                    if (dist < player.radius) {
+                        collectXP(orb.value);
+                        xpOrbs.splice(i, 1);
+                        continue;
+                    }
+                }
+                
+                // Decrease lifetime
+                orb.lifetime -= 1/60;
+                if (orb.lifetime <= 0) {
+                    xpOrbs.splice(i, 1);
+                }
+            }
+        }
+
+        // Collect XP
+        function collectXP(amount) {
+            playerXP += amount * player.stats.xpGain;
+            
+            // Check for level up
+            while (playerXP >= xpToNextLevel) {
+                playerXP -= xpToNextLevel;
+                playerLevel++;
+                xpToNextLevel = getXPForLevel(playerLevel);
+                levelUp();
+            }
+        }
+
+        // Level up - show upgrade UI
+        function levelUp() {
+            console.log(`LEVEL UP! Now level ${playerLevel}`);
+            showUpgradeUI();
+        }
+
+        // Render XP orbs
+        function renderXPOrbs() {
+            xpOrbs.forEach(orb => {
+                // Pulsing effect
+                const pulseSize = orb.radius + Math.sin(Date.now() / 100) * 1;
+                
+                ctx.fillStyle = orb.color;
+                ctx.globalAlpha = orb.magnetized ? 1.0 : 0.8;
+                ctx.beginPath();
+                ctx.arc(orb.x, orb.y, pulseSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Glow effect
+                ctx.strokeStyle = orb.color;
+                ctx.globalAlpha = 0.4;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(orb.x, orb.y, pulseSize + 3, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            });
+        }
+
+        // Spell card system
+        const spellCard = {
+            maxCharge: 100,
+            currentCharge: 0,
+            chargeRate: 10, // charge per second
+            damage: 100,
+            radius: 400,
+            maxUses: 1, // Can hold up to 1 charge by default
+            currentUses: 0, // Start with 0, need to charge
+            isActive: false,
+            effectDuration: 0.5,
+            effectTimer: 0
+        };
+
+        // Weapon type definitions
+        const WEAPON_TYPES = {
+            BASIC_SHOT: {
+                name: 'Basic Shot',
+                description: 'Simple forward-firing projectile',
+                baseDamage: 10,
+                baseSpeed: 10,
+                baseCooldown: 0.5,
+                piercing: 0,
+                color: '#ffffff',
+                size: 5,
+                targeting: 'nearest',
+                projectileType: 'straight',
+                upgrades: {
+                    penetration: 0,
+                    spreadShot: 0
+                }
+            },
+            SHURIKEN: {
+                name: 'Shuriken',
+                description: 'Throws spinning blades at nearest enemy',
+                baseDamage: 15,
+                baseSpeed: 8,
+                baseCooldown: 0.8,
+                piercing: 1,
+                color: '#4ecdc4',
+                size: 6,
+                targeting: 'nearest',
+                projectileType: 'straight',
+                upgrades: {
+                    splitOnHit: 0,
+                    bounceCount: 0
+                }
+            },
+            MAGIC_MISSILE: {
+                name: 'Magic Missile',
+                description: 'Homing projectiles that track enemies',
+                baseDamage: 12,
+                baseSpeed: 5,
+                baseCooldown: 1.0,
+                piercing: 0,
+                color: '#9d4edd',
+                size: 7,
+                targeting: 'nearest',
+                projectileType: 'homing',
+                upgrades: {
+                    homingStrength: 1
+                }
+            },
+            LIGHTNING: {
+                name: 'Lightning Chain',
+                description: 'Strikes nearest enemy, chains to others',
+                baseDamage: 25,
+                baseSpeed: 15,
+                baseCooldown: 1.5,
+                piercing: 3,
+                color: '#00f5ff',
+                size: 8,
+                targeting: 'nearest',
+                projectileType: 'chain',
+                upgrades: {
+                    chainRange: 100
+                }
+            },
+            FIREBALL: {
+                name: 'Fireball',
+                description: 'Explosive projectile with area damage',
+                baseDamage: 30,
+                baseSpeed: 6,
+                baseCooldown: 2.0,
+                piercing: 0,
+                color: '#ff6b35',
+                size: 10,
+                targeting: 'nearest',
+                projectileType: 'explosive',
+                upgrades: {
+                    explosionRadius: 50
+                }
+            },
+            ORBIT: {
+                name: 'Orbital Blades',
+                description: 'Blades orbit around the player',
+                baseDamage: 8,
+                baseSpeed: 0,
+                baseCooldown: 0,
+                piercing: 999,
+                color: '#ffd60a',
+                size: 8,
+                targeting: 'none',
+                projectileType: 'orbit',
+                upgrades: {
+                    orbitSpeed: 1
+                }
+            },
+            LASER: {
+                name: 'Laser Beam',
+                description: 'Continuous beam that pierces all enemies',
+                baseDamage: 5,
+                baseSpeed: 20,
+                baseCooldown: 0.15,
+                piercing: 999,
+                color: '#ff006e',
+                size: 4,
+                targeting: 'nearest',
+                projectileType: 'straight',
+                upgrades: {
+                    beamWidth: 1
+                }
+            }
+        };
+
+        // Upgrade pool
+        const UPGRADE_POOL = {
+            // Player stat upgrades
+            PLAYER_DAMAGE: {
+                type: 'player',
+                name: 'Increased Damage',
+                description: '+5 damage to all attacks',
+                apply: () => player.upgradeStat('damage', 5)
+            },
+            PLAYER_SPEED: {
+                type: 'player',
+                name: 'Movement Speed',
+                description: '+0.5 movement speed',
+                apply: () => player.upgradeStat('moveSpeed', 0.5)
+            },
+            PLAYER_ATTACK_SPEED: {
+                type: 'player',
+                name: 'Attack Speed',
+                description: '+10% attack speed',
+                apply: () => player.upgradeStat('attackSpeed', 0.1)
+            },
+            PLAYER_MAX_HEALTH: {
+                type: 'player',
+                name: 'Max Health',
+                description: '+20 max health',
+                apply: () => {
+                    player.upgradeStat('maxHealth', 20);
+                    player.heal(20);
+                }
+            },
+            PLAYER_ARMOR: {
+                type: 'player',
+                name: 'Armor',
+                description: '+5% damage reduction',
+                apply: () => player.upgradeStat('armor', 5)
+            },
+            PLAYER_HEALTH_REGEN: {
+                type: 'player',
+                name: 'Health Regeneration',
+                description: '+1 HP per second',
+                apply: () => player.upgradeStat('healthRegen', 1)
+            },
+            PLAYER_PROJECTILE_COUNT: {
+                type: 'player',
+                name: 'Extra Projectile',
+                description: '+1 projectile for all weapons',
+                apply: () => player.upgradeStat('projectileCount', 1)
+            },
+            PLAYER_CRIT_CHANCE: {
+                type: 'player',
+                name: 'Critical Chance',
+                description: '+5% critical hit chance',
+                apply: () => player.upgradeStat('critChance', 0.05)
+            },
+            PLAYER_CRIT_DAMAGE: {
+                type: 'player',
+                name: 'Critical Damage',
+                description: '+25% critical damage',
+                apply: () => player.upgradeStat('critDamage', 0.25)
+            },
+            PLAYER_PICKUP_RANGE: {
+                type: 'player',
+                name: 'Pickup Range',
+                description: '+20 pickup range',
+                apply: () => player.upgradeStat('pickupRange', 20)
+            },
+            
+            // Weapon unlock upgrades
+            UNLOCK_SHURIKEN: {
+                type: 'unlock',
+                name: 'Unlock: Shuriken',
+                description: 'Gain spinning blade weapon',
+                apply: () => addWeapon('SHURIKEN'),
+                requiresNotHaving: 'SHURIKEN'
+            },
+            UNLOCK_MAGIC_MISSILE: {
+                type: 'unlock',
+                name: 'Unlock: Magic Missile',
+                description: 'Gain homing missile weapon',
+                apply: () => addWeapon('MAGIC_MISSILE'),
+                requiresNotHaving: 'MAGIC_MISSILE'
+            },
+            UNLOCK_LIGHTNING: {
+                type: 'unlock',
+                name: 'Unlock: Lightning Chain',
+                description: 'Gain chaining lightning weapon',
+                apply: () => addWeapon('LIGHTNING'),
+                requiresNotHaving: 'LIGHTNING'
+            },
+            UNLOCK_FIREBALL: {
+                type: 'unlock',
+                name: 'Unlock: Fireball',
+                description: 'Gain explosive fireball weapon',
+                apply: () => addWeapon('FIREBALL'),
+                requiresNotHaving: 'FIREBALL'
+            },
+            UNLOCK_ORBIT: {
+                type: 'unlock',
+                name: 'Unlock: Orbital Blades',
+                description: 'Gain orbiting blade weapon',
+                apply: () => addWeapon('ORBIT'),
+                requiresNotHaving: 'ORBIT'
+            },
+            UNLOCK_LASER: {
+                type: 'unlock',
+                name: 'Unlock: Laser Beam',
+                description: 'Gain piercing laser weapon',
+                apply: () => addWeapon('LASER'),
+                requiresNotHaving: 'LASER'
+            },
+            
+            // Basic Shot specific upgrades
+            BASIC_SHOT_PENETRATION: {
+                type: 'weapon',
+                name: 'Penetrating Shots',
+                description: 'Basic shots can pierce enemies',
+                requiresWeapon: 'BASIC_SHOT',
+                apply: () => {
+                    const weapon = playerWeapons.find(w => w.type === 'BASIC_SHOT');
+                    if (weapon) weapon.upgrades.penetration++;
+                }
+            },
+            BASIC_SHOT_SPREAD: {
+                type: 'weapon',
+                name: 'Spread Shot',
+                description: 'Basic shot fires in a spread pattern',
+                requiresWeapon: 'BASIC_SHOT',
+                apply: () => {
+                    const weapon = playerWeapons.find(w => w.type === 'BASIC_SHOT');
+                    if (weapon) weapon.upgrades.spreadShot++;
+                }
+            },
+            
+            // Generic weapon upgrades
+            WEAPON_DAMAGE: {
+                type: 'weapon',
+                name: 'Weapon Damage',
+                description: '+20% damage to all weapons',
+                apply: () => {
+                    playerWeapons.forEach(w => {
+                        w.baseDamage *= 1.2;
+                    });
+                },
+                requiresWeapon: true
+            },
+            WEAPON_COOLDOWN: {
+                type: 'weapon',
+                name: 'Weapon Cooldown',
+                description: '-15% cooldown for all weapons',
+                apply: () => {
+                    playerWeapons.forEach(w => {
+                        w.baseCooldown *= 0.85;
+                    });
+                },
+                requiresWeapon: true
+            },
+            WEAPON_SPEED: {
+                type: 'weapon',
+                name: 'Projectile Speed',
+                description: '+25% projectile speed',
+                apply: () => {
+                    playerWeapons.forEach(w => {
+                        w.baseSpeed *= 1.25;
+                    });
+                },
+                requiresWeapon: true
+            },
+            WEAPON_PIERCING: {
+                type: 'weapon',
+                name: 'Piercing Shots',
+                description: '+1 pierce for all weapons',
+                apply: () => {
+                    playerWeapons.forEach(w => {
+                        w.piercing += 1;
+                    });
+                },
+                requiresWeapon: true
+            },
+            
+            // Spell card upgrades
+            SPELL_DAMAGE: {
+                type: 'spell',
+                name: 'Spell Power',
+                description: '+50 spell card damage',
+                apply: () => spellCard.damage += 50
+            },
+            SPELL_CHARGE_RATE: {
+                type: 'spell',
+                name: 'Faster Charging',
+                description: '+5 charge per second',
+                apply: () => spellCard.chargeRate += 5
+            },
+            SPELL_RADIUS: {
+                type: 'spell',
+                name: 'Spell Radius',
+                description: '+100 spell card radius',
+                apply: () => spellCard.radius += 100
+            },
+            SPELL_MAX_USES: {
+                type: 'spell',
+                name: 'Extra Charge',
+                description: '+1 maximum spell uses',
+                apply: () => {
+                    spellCard.maxUses += 1;
+                    spellCard.currentUses += 1;
+                }
+            },
+            
+            // Weapon-specific upgrades for SHURIKEN
+            SHURIKEN_SPLIT: {
+                type: 'weapon',
+                name: 'Split Shuriken',
+                description: 'Shuriken splits into 2 on hit',
+                requiresWeapon: 'SHURIKEN',
+                apply: () => {
+                    const weapon = playerWeapons.find(w => w.type === 'SHURIKEN');
+                    if (weapon) weapon.upgrades.splitOnHit++;
+                }
+            },
+            SHURIKEN_BOUNCE: {
+                type: 'weapon',
+                name: 'Bouncing Shuriken',
+                description: 'Shuriken bounces between enemies',
+                requiresWeapon: 'SHURIKEN',
+                apply: () => {
+                    const weapon = playerWeapons.find(w => w.type === 'SHURIKEN');
+                    if (weapon) weapon.upgrades.bounceCount += 2;
+                }
+            },
+            
+            // Weapon-specific upgrades for MAGIC_MISSILE
+            MAGIC_MISSILE_HOMING: {
+                type: 'weapon',
+                name: 'Stronger Homing',
+                description: 'Magic Missiles track enemies better',
+                requiresWeapon: 'MAGIC_MISSILE',
+                apply: () => {
+                    const weapon = playerWeapons.find(w => w.type === 'MAGIC_MISSILE');
+                    if (weapon) weapon.upgrades.homingStrength += 0.5;
+                }
+            },
+            
+            // Weapon-specific upgrades for LIGHTNING
+            LIGHTNING_CHAIN_RANGE: {
+                type: 'weapon',
+                name: 'Extended Chain',
+                description: 'Lightning chains further between enemies',
+                requiresWeapon: 'LIGHTNING',
+                apply: () => {
+                    const weapon = playerWeapons.find(w => w.type === 'LIGHTNING');
+                    if (weapon) weapon.upgrades.chainRange += 50;
+                }
+            },
+            
+            // Weapon-specific upgrades for FIREBALL
+            FIREBALL_EXPLOSION: {
+                type: 'weapon',
+                name: 'Bigger Explosion',
+                description: 'Fireball explosion radius increased',
+                requiresWeapon: 'FIREBALL',
+                apply: () => {
+                    const weapon = playerWeapons.find(w => w.type === 'FIREBALL');
+                    if (weapon) weapon.upgrades.explosionRadius += 25;
+                }
+            },
+            
+            // Weapon-specific upgrades for ORBIT
+            ORBIT_SPEED: {
+                type: 'weapon',
+                name: 'Faster Orbit',
+                description: 'Orbital blades spin faster',
+                requiresWeapon: 'ORBIT',
+                apply: () => {
+                    const weapon = playerWeapons.find(w => w.type === 'ORBIT');
+                    if (weapon) weapon.upgrades.orbitSpeed += 0.5;
+                }
+            },
+            
+            // Weapon-specific upgrades for LASER
+            LASER_WIDTH: {
+                type: 'weapon',
+                name: 'Wider Laser',
+                description: 'Laser beam is wider',
+                requiresWeapon: 'LASER',
+                apply: () => {
+                    const weapon = playerWeapons.find(w => w.type === 'LASER');
+                    if (weapon) weapon.upgrades.beamWidth += 0.5;
+                }
+            }
+        };
+
+        // Get random upgrades
+        function getRandomUpgrades(count = 3) {
+            const available = Object.keys(UPGRADE_POOL).filter(key => {
+                const upgrade = UPGRADE_POOL[key];
+                
+                // Never show weapon unlocks in normal pool (only at level 10, 20, etc.)
+                if (upgrade.type === 'unlock') {
+                    return false;
+                }
+                
+                // Filter out generic weapon upgrades if player has no weapons
+                if (upgrade.requiresWeapon === true && playerWeapons.length === 0) {
+                    return false;
+                }
+                
+                // Filter out weapon-specific upgrades if player doesn't have that weapon
+                if (typeof upgrade.requiresWeapon === 'string') {
+                    const hasWeapon = playerWeapons.some(w => w.type === upgrade.requiresWeapon);
+                    if (!hasWeapon) return false;
+                }
+                
+                // Filter out weapon unlock upgrades if player already has that weapon
+                if (upgrade.requiresNotHaving) {
+                    const hasWeapon = playerWeapons.some(w => w.type === upgrade.requiresNotHaving);
+                    if (hasWeapon) return false;
+                }
+                
+                return true;
+            });
+            
+            const shuffled = available.sort(() => Math.random() - 0.5);
+            return shuffled.slice(0, count).map(key => ({
+                key: key,
+                ...UPGRADE_POOL[key]
+            }));
+        }
+
+        // Show upgrade UI
+        function showUpgradeUI() {
+            let upgrades;
+            
+            // Special upgrade patterns based on level
+            if (playerLevel % 10 === 0 && playerWeapons.length < 5) {
+                // Every level ending in 0: offer 3 weapon unlocks (if under 5 weapons)
+                const weaponUnlocks = Object.keys(UPGRADE_POOL).filter(key => {
+                    const upgrade = UPGRADE_POOL[key];
+                    if (upgrade.type !== 'unlock') return false;
+                    // Only show if player doesn't have the weapon
+                    if (upgrade.requiresNotHaving) {
+                        const hasWeapon = playerWeapons.some(w => w.type === upgrade.requiresNotHaving);
+                        return !hasWeapon;
+                    }
+                    return false;
+                });
+                
+                const shuffled = weaponUnlocks.sort(() => Math.random() - 0.5);
+                const count = Math.min(3, weaponUnlocks.length);
+                upgrades = shuffled.slice(0, count).map(key => ({
+                    key: key,
+                    ...UPGRADE_POOL[key]
+                }));
+                
+                // If we have some weapon unlocks but less than 3, fill with normal upgrades
+                if (upgrades.length < 3) {
+                    const normalUpgrades = getRandomUpgrades(3 - upgrades.length);
+                    upgrades = [...upgrades, ...normalUpgrades];
+                }
+            } else if (playerLevel % 5 === 0) {
+                // Every level ending in 5: 3 normal + 1 weapon-specific
+                const normalUpgrades = getRandomUpgrades(3);
+                
+                // Get all available weapon-specific upgrades
+                const weaponSpecific = Object.keys(UPGRADE_POOL).filter(key => {
+                    const upgrade = UPGRADE_POOL[key];
+                    if (upgrade.type !== 'weapon') return false;
+                    if (typeof upgrade.requiresWeapon === 'string') {
+                        const hasWeapon = playerWeapons.some(w => w.type === upgrade.requiresWeapon);
+                        return hasWeapon;
+                    }
+                    return false;
+                });
+                
+                if (weaponSpecific.length > 0) {
+                    const randomWeaponUpgrade = weaponSpecific[Math.floor(Math.random() * weaponSpecific.length)];
+                    upgrades = [...normalUpgrades, {
+                        key: randomWeaponUpgrade,
+                        ...UPGRADE_POOL[randomWeaponUpgrade]
+                    }];
+                } else {
+                    upgrades = normalUpgrades;
+                }
+            } else {
+                // Normal levels: 3 random upgrades
+                upgrades = getRandomUpgrades(3);
+            }
+            
+            const ui = document.getElementById('upgradeUI');
+            const container = document.getElementById('upgradeChoices');
+            
+            container.innerHTML = '';
+            
+            upgrades.forEach((upgrade, index) => {
+                const btn = document.createElement('div');
+                
+                // Determine CSS class based on upgrade type
+                let upgradeClass = 'upgrade-choice';
+                if (upgrade.type === 'player') {
+                    upgradeClass += ' player-upgrade';
+                } else if (upgrade.type === 'spell') {
+                    upgradeClass += ' spell-upgrade';
+                } else if (upgrade.type === 'unlock') {
+                    upgradeClass += ' unlock-upgrade';
+                } else if (upgrade.type === 'weapon') {
+                    // Check if it's weapon-specific or generic
+                    if (upgrade.requiresWeapon && typeof upgrade.requiresWeapon === 'string') {
+                        upgradeClass += ' weapon-specific-upgrade';
+                    } else {
+                        upgradeClass += ' weapon-upgrade';
+                    }
+                }
+                
+                btn.className = upgradeClass;
+                btn.innerHTML = `
+                    <div class="upgrade-name">${upgrade.name}</div>
+                    <div class="upgrade-type">${upgrade.type.toUpperCase()}</div>
+                    <div class="upgrade-description">${upgrade.description}</div>
+                `;
+                btn.onclick = () => selectUpgrade(upgrade);
+                container.appendChild(btn);
+            });
+            
+            ui.style.display = 'flex';
+            isPaused = true; // Pause the game
+        }
+
+        // Select upgrade
+        function selectUpgrade(upgrade) {
+            upgrade.apply();
+            document.getElementById('upgradeUI').style.display = 'none';
+            isPaused = false; // Unpause the game
+            console.log(`Applied upgrade: ${upgrade.name}`);
+        }
+
+        // Reset character
+        function resetCharacter() {
+            player.initStats();
+            player.health = player.stats.maxHealth;
+            playerWeapons.length = 0;
+            playerProjectiles.length = 0;
+            xpOrbs.length = 0;
+            playerLevel = 1;
+            playerXP = 0;
+            xpToNextLevel = getXPForLevel(1);
+            spellCard.currentCharge = 0;
+            spellCard.currentUses = 0; // Start with 0, need to charge to get first one
+            spellCard.damage = 100;
+            spellCard.radius = 400;
+            spellCard.chargeRate = 10;
+            spellCard.maxUses = 1; // Can hold up to 1 charge by default
+            addWeapon('BASIC_SHOT'); // Give starting weapon
+            console.log('Character reset to default');
+        }
+
+        // Create weapon instance
+        function createWeapon(type) {
+            const template = WEAPON_TYPES[type];
+            return {
+                type: type,
+                level: 1,
+                ...template,
+                cooldownTimer: 0,
+                orbitAngle: Math.random() * Math.PI * 2
+            };
+        }
+
+        // Add weapon to player
+        function addWeapon(type) {
+            // Check max weapon limit
+            if (playerWeapons.length >= 5 && !playerWeapons.find(w => w.type === type)) {
+                console.log('Cannot add weapon - max 5 weapons reached!');
+                return false;
+            }
+            
+            // Check if player already has this weapon
+            const existing = playerWeapons.find(w => w.type === type);
+            if (existing) {
+                existing.level++;
+                console.log(`${existing.name} upgraded to level ${existing.level}`);
+                return true;
+            } else {
+                playerWeapons.push(createWeapon(type));
+                console.log(`${WEAPON_TYPES[type].name} acquired!`);
+                return true;
+            }
+        }
+
+        // Create player projectile
+        function createPlayerProjectile(x, y, vx, vy, weapon, targetPos = null) {
+            return {
+                x: x,
+                y: y,
+                vx: vx,
+                vy: vy,
+                weapon: weapon,
+                targetPos: targetPos, // Store position, not reference
+                damage: weapon.baseDamage * (1 + (weapon.level - 1) * 0.2) * player.stats.damage / 10,
+                speed: weapon.baseSpeed,
+                piercing: weapon.piercing,
+                piercedEnemies: new Set(),
+                color: weapon.color,
+                size: weapon.size,
+                lifetime: 5.0,
+                orbitAngle: weapon.orbitAngle || 0,
+                orbitDistance: 60,
+                homingStrength: weapon.projectileType === 'homing' ? 
+                    (0.3 + (weapon.upgrades?.homingStrength || 1) * 0.2) : 0 // Base 0.3, upgrades add more
+            };
+        }
+
+        // Find nearest enemy
+        function findNearestEnemy() {
+            // Include dummy enemy if enabled
+            const allTargets = [...enemies];
+            if (dummyEnemyEnabled && dummyEnemy) {
+                allTargets.push(dummyEnemy);
+            }
+            
+            if (allTargets.length === 0) return null;
+            
+            let nearest = null;
+            let minDist = Infinity;
+            
+            allTargets.forEach(enemy => {
+                const dx = enemy.x - player.x;
+                const dy = enemy.y - player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = enemy;
+                }
+            });
+            
+            return nearest;
+        }
+
+        // Fire weapon
+        function fireWeapon(weapon) {
+            if (weapon.projectileType === 'orbit') {
+                // Orbital weapons are handled separately
+                return;
+            }
+            
+            const target = findNearestEnemy();
+            if (!target) return;
+            
+            // Calculate angle to target's CURRENT position (snapshot)
+            const dx = target.x - player.x;
+            const dy = target.y - player.y;
+            const angle = Math.atan2(dy, dx);
+            
+            // Store target position for homing (not reference)
+            const targetPos = weapon.projectileType === 'homing' ? 
+                { x: target.x, y: target.y } : null;
+            
+            // Create projectiles based on player's projectileCount stat
+            const count = Math.floor(player.stats.projectileCount);
+            const spreadAngle = (count > 1) ? Math.PI / 8 : 0;
+            
+            for (let i = 0; i < count; i++) {
+                const offsetAngle = angle - spreadAngle/2 + (spreadAngle / Math.max(1, count - 1)) * i;
+                const vx = Math.cos(offsetAngle) * weapon.baseSpeed;
+                const vy = Math.sin(offsetAngle) * weapon.baseSpeed;
+                
+                playerProjectiles.push(createPlayerProjectile(
+                    player.x, player.y, vx, vy, weapon, targetPos
+                ));
+            }
+        }
+
+        // Update weapons
+        function updateWeapons() {
+            playerWeapons.forEach(weapon => {
+                weapon.cooldownTimer -= 1/60 * player.stats.attackSpeed;
+                
+                if (weapon.projectileType === 'orbit') {
+                    // Orbital weapons create persistent projectiles
+                    const orbitCount = weapon.level;
+                    const existing = playerProjectiles.filter(p => p.weapon === weapon);
+                    
+                    if (existing.length < orbitCount) {
+                        for (let i = existing.length; i < orbitCount; i++) {
+                            const proj = createPlayerProjectile(player.x, player.y, 0, 0, weapon);
+                            proj.orbitAngle = (Math.PI * 2 / orbitCount) * i;
+                            playerProjectiles.push(proj);
+                        }
+                    }
+                } else if (weapon.cooldownTimer <= 0 && enemies.length > 0) {
+                    fireWeapon(weapon);
+                    weapon.cooldownTimer = weapon.baseCooldown;
+                }
+            });
+        }
+
+        // Update player projectiles
+        function updatePlayerProjectiles() {
+            for (let i = playerProjectiles.length - 1; i >= 0; i--) {
+                const proj = playerProjectiles[i];
+                
+                // Handle orbital projectiles
+                if (proj.weapon.projectileType === 'orbit') {
+                    proj.orbitAngle += 0.05 * proj.weapon.level * (proj.weapon.upgrades?.orbitSpeed || 1);
+                    proj.x = player.x + Math.cos(proj.orbitAngle) * proj.orbitDistance;
+                    proj.y = player.y + Math.sin(proj.orbitAngle) * proj.orbitDistance;
+                } else {
+                    // Handle homing with gentle arc
+                    if (proj.homingStrength > 0 && proj.targetPos) {
+                        // Find nearest enemy to target position (not perfect tracking)
+                        const nearestToTarget = findNearestEnemy();
+                        
+                        if (nearestToTarget) {
+                            const dx = nearestToTarget.x - proj.x;
+                            const dy = nearestToTarget.y - proj.y;
+                            const distToEnemy = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distToEnemy > 0) {
+                                const targetAngle = Math.atan2(dy, dx);
+                                const currentAngle = Math.atan2(proj.vy, proj.vx);
+                                
+                                // Calculate angle difference
+                                let angleDiff = targetAngle - currentAngle;
+                                // Normalize to -PI to PI
+                                while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+                                while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+                                
+                                // Apply gentle arc - turn rate affected by speed and homing strength
+                                // Faster projectiles turn less (harder to redirect)
+                                const turnRate = proj.homingStrength / (proj.speed * 0.1);
+                                const maxTurn = turnRate * 0.1; // Max turn per frame
+                                const actualTurn = Math.max(-maxTurn, Math.min(maxTurn, angleDiff * 0.1));
+                                
+                                const newAngle = currentAngle + actualTurn;
+                                
+                                // Update velocity with new angle, maintaining speed
+                                proj.vx = Math.cos(newAngle) * proj.speed;
+                                proj.vy = Math.sin(newAngle) * proj.speed;
+                            }
+                        }
+                    }
+                    
+                    // Update position
+                    proj.x += proj.vx;
+                    proj.y += proj.vy;
+                    
+                    // Decrease lifetime
+                    proj.lifetime -= 1/60;
+                }
+                
+                // Check collision with enemies
+                let hitEnemy = false;
+                
+                // Check dummy enemy first if enabled
+                if (dummyEnemyEnabled && dummyEnemy && !proj.piercedEnemies.has(dummyEnemy.id)) {
+                    const dx = proj.x - dummyEnemy.x;
+                    const dy = proj.y - dummyEnemy.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < dummyEnemy.radius + proj.size) {
+                        // Apply damage with crit calculation (for visual/testing)
+                        let damage = proj.damage;
+                        if (Math.random() < player.stats.critChance) {
+                            damage *= player.stats.critDamage;
+                        }
+                        
+                        // Don't actually reduce dummy HP, just mark as pierced
+                        proj.piercedEnemies.add(dummyEnemy.id);
+                        
+                        // Check if projectile should be removed
+                        if (proj.piercedEnemies.size > proj.piercing) {
+                            hitEnemy = true;
+                        }
+                    }
+                }
+                
+                // Check regular enemies
+                if (!hitEnemy) {
+                    for (let j = enemies.length - 1; j >= 0; j--) {
+                        const enemy = enemies[j];
+                        
+                        // Skip if already pierced this enemy
+                        if (proj.piercedEnemies.has(enemy.id)) continue;
+                        
+                        const dx = proj.x - enemy.x;
+                        const dy = proj.y - enemy.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (dist < enemy.radius + proj.size) {
+                            // Apply damage with crit calculation
+                            let damage = proj.damage;
+                            if (Math.random() < player.stats.critChance) {
+                                damage *= player.stats.critDamage;
+                            }
+                            
+                            enemy.hp -= damage;
+                            proj.piercedEnemies.add(enemy.id);
+                            
+                            if (enemy.hp <= 0) {
+                                // Drop XP when enemy dies
+                                spawnXPOrb(enemy.x, enemy.y, enemy.xp);
+                                enemies.splice(j, 1);
+                            }
+                            
+                            // Check if projectile should be removed
+                            if (proj.piercedEnemies.size > proj.piercing) {
+                                hitEnemy = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                // Remove projectile if needed (aggressive cleanup)
+                if (hitEnemy || proj.lifetime <= 0 ||
+                    (proj.weapon.projectileType !== 'orbit' && 
+                     (proj.x < -100 || proj.x > GAME_WIDTH + 100 || 
+                      proj.y < -100 || proj.y > GAME_HEIGHT + 100))) {
+                    playerProjectiles.splice(i, 1);
+                }
+            }
+        }
+
+        // Render player projectiles
+        function renderPlayerProjectiles() {
+            playerProjectiles.forEach(proj => {
+                ctx.fillStyle = proj.color;
+                ctx.globalAlpha = 0.9;
+                ctx.beginPath();
+                ctx.arc(proj.x, proj.y, proj.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+                
+                // Add glow
+                ctx.strokeStyle = proj.color;
+                ctx.globalAlpha = 0.5;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(proj.x, proj.y, proj.size + 1, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            });
+        }
+
+        // Bullet factory
+        function createBullet(x, y, vx, vy, damage, color = '#ff6b6b', size = 5) {
+            return {
+                id: bulletIdCounter++,
+                x: x,
+                y: y,
+                vx: vx,
+                vy: vy,
+                damage: damage,
+                color: color,
+                size: size,
+                grazed: false
+            };
+        }
+
+        // Spawn bullet
+        function spawnBullet(x, y, angle, speed, damage, color, size) {
+            const vx = Math.cos(angle) * speed;
+            const vy = Math.sin(angle) * speed;
+            bullets.push(createBullet(x, y, vx, vy, damage, color, size));
+        }
+
+        // Update all bullets
+        function updateBullets() {
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                
+                // Update position
+                bullet.x += bullet.vx;
+                bullet.y += bullet.vy;
+                
+                // Check collision with player
+                const dx = bullet.x - player.x;
+                const dy = bullet.y - player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                // Get current hitbox radius based on graze state
+                const currentHitbox = player.isGrazing ? GRAZE_HITBOX_RADIUS : HITBOX_RADIUS;
+                
+                // Graze detection (between hitbox and player radius)
+                if (!bullet.grazed && dist < player.radius && dist > currentHitbox) {
+                    bullet.grazed = true;
+                    // TODO: Add graze score/effects later
+                    console.log('GRAZE!');
+                }
+                
+                // Hit detection
+                if (dist < currentHitbox + bullet.size) {
+                    if (player.takeDamage(bullet.damage)) {
+                        bullets.splice(i, 1);
+                        continue;
+                    }
+                }
+                
+                // Remove if off screen (aggressive cleanup)
+                if (bullet.x < -100 || bullet.x > GAME_WIDTH + 100 ||
+                    bullet.y < -100 || bullet.y > GAME_HEIGHT + 100) {
+                    bullets.splice(i, 1);
+                }
+            }
+        }
+
+        // Render bullets
+        function renderBullets() {
+            bullets.forEach(bullet => {
+                ctx.fillStyle = bullet.color;
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add glow effect
+                ctx.strokeStyle = bullet.color;
+                ctx.globalAlpha = 0.3;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.size + 2, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            });
+        }
+
+        // Enemy type definitions
+        const ENEMY_TYPES = {
+            // BASIC ENEMIES
+            DRIFTER: {
+                name: 'Drifter',
+                color: '#95e1d3',
+                radius: 15,
+                hp: 30,
+                speed: 1,
+                damage: 10,
+                xp: 5,
+                shootCooldown: 2.0,
+                shootPattern: 'single',
+                behavior: 'drift'
+            },
+            RUSHER: {
+                name: 'Rusher',
+                color: '#f38181',
+                radius: 12,
+                hp: 20,
+                speed: 3,
+                damage: 15,
+                xp: 8,
+                shootCooldown: 3.0,
+                shootPattern: 'none',
+                behavior: 'rush'
+            },
+            ORBITER: {
+                name: 'Orbiter',
+                color: '#aa96da',
+                radius: 14,
+                hp: 40,
+                speed: 2,
+                damage: 10,
+                xp: 10,
+                shootCooldown: 1.5,
+                shootPattern: 'aimed',
+                behavior: 'orbit'
+            },
+            WANDERER: {
+                name: 'Wanderer',
+                color: '#fcbad3',
+                radius: 16,
+                hp: 35,
+                speed: 1.5,
+                damage: 10,
+                xp: 7,
+                shootCooldown: 2.5,
+                shootPattern: 'random',
+                behavior: 'wander'
+            },
+            
+            // SHOOTERS
+            SNIPER: {
+                name: 'Sniper',
+                color: '#ff6b9d',
+                radius: 13,
+                hp: 25,
+                speed: 0.5,
+                damage: 25,
+                xp: 12,
+                shootCooldown: 2.0,
+                shootPattern: 'aimed',
+                behavior: 'stationary'
+            },
+            SPRAYER: {
+                name: 'Sprayer',
+                color: '#ffd93d',
+                radius: 18,
+                hp: 50,
+                speed: 0.8,
+                damage: 8,
+                xp: 15,
+                shootCooldown: 1.0,
+                shootPattern: 'spread',
+                behavior: 'drift'
+            },
+            SPIRAL_SHOOTER: {
+                name: 'Spiral Shooter',
+                color: '#6bcf7f',
+                radius: 20,
+                hp: 60,
+                speed: 1,
+                damage: 12,
+                xp: 20,
+                shootCooldown: 0.3,
+                shootPattern: 'spiral',
+                behavior: 'drift'
+            },
+            BURST_SHOOTER: {
+                name: 'Burst Shooter',
+                color: '#4d96ff',
+                radius: 17,
+                hp: 45,
+                speed: 1.2,
+                damage: 15,
+                xp: 18,
+                shootCooldown: 0.2,
+                shootPattern: 'burst',
+                behavior: 'drift'
+            },
+            
+            // ELITE/SPECIAL
+            TANK: {
+                name: 'Tank',
+                color: '#e63946',
+                radius: 30,
+                hp: 200,
+                speed: 0.5,
+                damage: 30,
+                xp: 50,
+                shootCooldown: 1.5,
+                shootPattern: 'circle',
+                behavior: 'slow_chase'
+            },
+            SPLITTER: {
+                name: 'Splitter',
+                color: '#06ffa5',
+                radius: 22,
+                hp: 80,
+                speed: 1.5,
+                damage: 12,
+                xp: 30,
+                shootCooldown: 2.0,
+                shootPattern: 'aimed',
+                behavior: 'drift',
+                onDeath: 'split'
+            },
+            SUMMONER: {
+                name: 'Summoner',
+                color: '#9d4edd',
+                radius: 25,
+                hp: 100,
+                speed: 0.8,
+                damage: 10,
+                xp: 40,
+                shootCooldown: 5.0,
+                shootPattern: 'none',
+                behavior: 'retreat',
+                special: 'summon'
+            },
+            TELEPORTER: {
+                name: 'Teleporter',
+                color: '#00f5ff',
+                radius: 15,
+                hp: 40,
+                speed: 2,
+                damage: 20,
+                xp: 25,
+                shootCooldown: 1.0,
+                shootPattern: 'aimed',
+                behavior: 'teleport'
+            },
+            
+            // BOSS-TIER
+            MINI_BOSS: {
+                name: 'Mini Boss',
+                color: '#ff006e',
+                radius: 40,
+                hp: 500,
+                speed: 1,
+                damage: 40,
+                xp: 200,
+                shootCooldown: 0.8,
+                shootPattern: 'complex',
+                behavior: 'boss'
+            }
+        };
+
+        // Enemy factory
+        function createEnemy(type, x, y) {
+            const template = ENEMY_TYPES[type];
+            return {
+                id: enemyIdCounter++,
+                type: type,
+                x: x,
+                y: y,
+                vx: 0,
+                vy: 0,
+                ...template,
+                maxHp: template.hp,
+                shootTimer: 0,
+                behaviorTimer: 0,
+                angle: Math.random() * Math.PI * 2,
+                targetX: x,
+                targetY: y,
+                burstCount: 0,
+                teleportTimer: 0,
+                summonTimer: 0,
+                phase: 0
+            };
+        }
+
+        // Spawn enemy at position
+        function spawnEnemy(type, x, y) {
+            if (!x) x = Math.random() * GAME_WIDTH;
+            if (!y) y = Math.random() * 100; // Top of screen
+            enemies.push(createEnemy(type, x, y));
+        }
+
+        // Update all enemies
+        function updateEnemies() {
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                
+                // Update behavior
+                updateEnemyBehavior(enemy);
+                
+                // Update shooting
+                enemy.shootTimer -= 1/60;
+                if (enemy.shootTimer <= 0 && enemy.shootPattern !== 'none') {
+                    shootBulletPattern(enemy);
+                    enemy.shootTimer = enemy.shootCooldown;
+                }
+                
+                // Update position
+                enemy.x += enemy.vx;
+                enemy.y += enemy.vy;
+                
+                // Remove if off screen (aggressive cleanup)
+                if (enemy.x < -200 || enemy.x > GAME_WIDTH + 200 ||
+                    enemy.y < -200 || enemy.y > GAME_HEIGHT + 200) {
+                    enemies.splice(i, 1);
+                }
+            }
+        }
+
+        // Enemy behavior patterns
+        function updateEnemyBehavior(enemy) {
+            const dx = player.x - enemy.x;
+            const dy = player.y - enemy.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
+            
+            enemy.behaviorTimer += 1/60;
+            
+            switch(enemy.behavior) {
+                case 'drift':
+                    enemy.vy = enemy.speed * 0.5;
+                    break;
+                    
+                case 'rush':
+                    enemy.vx = Math.cos(angle) * enemy.speed;
+                    enemy.vy = Math.sin(angle) * enemy.speed;
+                    break;
+                    
+                case 'orbit':
+                    if (dist > 200) {
+                        enemy.vx = Math.cos(angle) * enemy.speed;
+                        enemy.vy = Math.sin(angle) * enemy.speed;
+                    } else {
+                        const orbitAngle = angle + Math.PI / 2;
+                        enemy.vx = Math.cos(orbitAngle) * enemy.speed;
+                        enemy.vy = Math.sin(orbitAngle) * enemy.speed;
+                    }
+                    break;
+                    
+                case 'wander':
+                    if (enemy.behaviorTimer > 2) {
+                        enemy.targetX = Math.random() * GAME_WIDTH;
+                        enemy.targetY = Math.random() * GAME_HEIGHT;
+                        enemy.behaviorTimer = 0;
+                    }
+                    const wanderDx = enemy.targetX - enemy.x;
+                    const wanderDy = enemy.targetY - enemy.y;
+                    const wanderAngle = Math.atan2(wanderDy, wanderDx);
+                    enemy.vx = Math.cos(wanderAngle) * enemy.speed;
+                    enemy.vy = Math.sin(wanderAngle) * enemy.speed;
+                    break;
+                    
+                case 'stationary':
+                    enemy.vx *= 0.9;
+                    enemy.vy *= 0.9;
+                    break;
+                    
+                case 'slow_chase':
+                    if (dist > 150) {
+                        enemy.vx = Math.cos(angle) * enemy.speed;
+                        enemy.vy = Math.sin(angle) * enemy.speed;
+                    } else {
+                        enemy.vx *= 0.95;
+                        enemy.vy *= 0.95;
+                    }
+                    break;
+                    
+                case 'retreat':
+                    if (dist < 250) {
+                        enemy.vx = -Math.cos(angle) * enemy.speed;
+                        enemy.vy = -Math.sin(angle) * enemy.speed;
+                    } else {
+                        enemy.vx *= 0.9;
+                        enemy.vy *= 0.9;
+                    }
+                    break;
+                    
+                case 'teleport':
+                    enemy.teleportTimer += 1/60;
+                    if (enemy.teleportTimer > 3) {
+                        enemy.x = Math.random() * GAME_WIDTH;
+                        enemy.y = Math.random() * GAME_HEIGHT;
+                        enemy.teleportTimer = 0;
+                    }
+                    enemy.vx = Math.cos(angle) * enemy.speed;
+                    enemy.vy = Math.sin(angle) * enemy.speed;
+                    break;
+                    
+                case 'boss':
+                    // Complex boss movement
+                    if (enemy.behaviorTimer < 3) {
+                        enemy.vx = Math.cos(enemy.behaviorTimer) * enemy.speed * 2;
+                        enemy.vy = Math.sin(enemy.behaviorTimer * 2) * enemy.speed;
+                    } else if (enemy.behaviorTimer < 6) {
+                        enemy.vx = Math.cos(angle) * enemy.speed;
+                        enemy.vy = Math.sin(angle) * enemy.speed;
+                    } else {
+                        enemy.behaviorTimer = 0;
+                    }
+                    break;
+            }
+            
+            // Special abilities
+            if (enemy.special === 'summon') {
+                enemy.summonTimer += 1/60;
+                if (enemy.summonTimer > 5) {
+                    spawnEnemy('DRIFTER', enemy.x, enemy.y);
+                    enemy.summonTimer = 0;
+                }
+            }
+        }
+
+        // Bullet patterns (placeholder for now)
+        function shootBulletPattern(enemy) {
+            const dx = player.x - enemy.x;
+            const dy = player.y - enemy.y;
+            const angleToPlayer = Math.atan2(dy, dx);
+            const bulletSpeed = 3;
+            
+            switch(enemy.shootPattern) {
+                case 'single':
+                    // Single bullet aimed at player
+                    spawnBullet(enemy.x, enemy.y, angleToPlayer, bulletSpeed, 
+                        enemy.damage, '#ff6b6b', 5);
+                    break;
+                    
+                case 'aimed':
+                    // Single aimed shot (faster)
+                    spawnBullet(enemy.x, enemy.y, angleToPlayer, bulletSpeed * 1.5, 
+                        enemy.damage, '#ff1744', 6);
+                    break;
+                    
+                case 'random':
+                    // Random direction
+                    const randomAngle = Math.random() * Math.PI * 2;
+                    spawnBullet(enemy.x, enemy.y, randomAngle, bulletSpeed, 
+                        enemy.damage, '#9c27b0', 5);
+                    break;
+                    
+                case 'spread':
+                    // 5-way spread
+                    const spreadCount = 5;
+                    const spreadAngle = Math.PI / 4; // 45 degrees total spread
+                    for (let i = 0; i < spreadCount; i++) {
+                        const angle = angleToPlayer - spreadAngle/2 + (spreadAngle / (spreadCount - 1)) * i;
+                        spawnBullet(enemy.x, enemy.y, angle, bulletSpeed, 
+                            enemy.damage * 0.8, '#ffd93d', 5);
+                    }
+                    break;
+                    
+                case 'spiral':
+                    // Rotating spiral
+                    const spiralBullets = 3;
+                    for (let i = 0; i < spiralBullets; i++) {
+                        const angle = enemy.angle + (Math.PI * 2 / spiralBullets) * i;
+                        spawnBullet(enemy.x, enemy.y, angle, bulletSpeed, 
+                            enemy.damage, '#00e676', 4);
+                    }
+                    enemy.angle += 0.2; // Rotate for next shot
+                    break;
+                    
+                case 'burst':
+                    // 3-round burst
+                    if (enemy.burstCount < 3) {
+                        spawnBullet(enemy.x, enemy.y, angleToPlayer, bulletSpeed * 1.3, 
+                            enemy.damage, '#2196f3', 5);
+                        enemy.burstCount++;
+                        enemy.shootTimer = 0.1; // Quick succession
+                    } else {
+                        enemy.burstCount = 0;
+                        enemy.shootTimer = enemy.shootCooldown; // Normal cooldown after burst
+                    }
+                    break;
+                    
+                case 'circle':
+                    // Full circle of bullets
+                    const circleBullets = 12;
+                    for (let i = 0; i < circleBullets; i++) {
+                        const angle = (Math.PI * 2 / circleBullets) * i;
+                        spawnBullet(enemy.x, enemy.y, angle, bulletSpeed * 0.8, 
+                            enemy.damage * 0.7, '#e91e63', 6);
+                    }
+                    break;
+                    
+                case 'complex':
+                    // Boss pattern: alternating spiral and aimed shots
+                    if (enemy.phase % 2 === 0) {
+                        // Spiral
+                        const complexSpiral = 8;
+                        for (let i = 0; i < complexSpiral; i++) {
+                            const angle = enemy.angle + (Math.PI * 2 / complexSpiral) * i;
+                            spawnBullet(enemy.x, enemy.y, angle, bulletSpeed, 
+                                enemy.damage * 0.6, '#ff006e', 5);
+                        }
+                        enemy.angle += 0.15;
+                    } else {
+                        // Aimed spread
+                        for (let i = 0; i < 3; i++) {
+                            const angle = angleToPlayer - 0.3 + 0.3 * i;
+                            spawnBullet(enemy.x, enemy.y, angle, bulletSpeed * 1.5, 
+                                enemy.damage * 0.8, '#ff006e', 6);
+                        }
+                    }
+                    enemy.phase++;
+                    break;
+            }
+        }
+
+        // Kill all enemies
+        function killAllEnemies() {
+            enemies.length = 0;
+            console.log('All enemies killed');
+        }
+
+        // Toggle dummy enemy
+        function toggleDummyEnemy() {
+            dummyEnemyEnabled = !dummyEnemyEnabled;
+            if (dummyEnemyEnabled) {
+                dummyEnemy = {
+                    id: -1,
+                    type: 'DUMMY',
+                    x: GAME_WIDTH / 2,
+                    y: GAME_HEIGHT / 2,
+                    vx: 0,
+                    vy: 0,
+                    name: 'Dummy',
+                    color: '#888888',
+                    radius: 30,
+                    hp: 999999,
+                    maxHp: 999999,
+                    speed: 0,
+                    damage: 0,
+                    xp: 0,
+                    shootCooldown: 999,
+                    shootPattern: 'none',
+                    isDummy: true
+                };
+                console.log('Dummy enemy enabled');
+            } else {
+                dummyEnemy = null;
+                console.log('Dummy enemy disabled');
+            }
+        }
+
+        // Clear all bullets
+        function clearAllBullets() {
+            bullets.length = 0;
+            console.log('All bullets cleared');
+        }
+
+        // Activate spell card
+        function activateSpellCard() {
+            // Can activate if have charges available
+            if (spellCard.currentUses > 0) {
+                spellCard.isActive = true;
+                spellCard.effectTimer = spellCard.effectDuration;
+                spellCard.currentUses--; // Decrease available uses
+                
+                // Clear all bullets
+                bullets.length = 0;
+                
+                // Damage all enemies and drop XP
+                enemies.forEach(enemy => {
+                    const dx = enemy.x - player.x;
+                    const dy = enemy.y - player.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist <= spellCard.radius) {
+                        enemy.hp -= spellCard.damage;
+                    }
+                });
+                
+                // Remove dead enemies and spawn XP
+                for (let i = enemies.length - 1; i >= 0; i--) {
+                    if (enemies[i].hp <= 0) {
+                        // Drop XP before removing enemy
+                        spawnXPOrb(enemies[i].x, enemies[i].y, enemies[i].xp);
+                        enemies.splice(i, 1);
+                    }
+                }
+                
+                console.log(`SPELL CARD ACTIVATED! ${spellCard.currentUses} charges remaining`);
+            } else {
+                console.log('No spell card charges available!');
+            }
+        }
+
+        // Render enemies
+        function renderEnemies() {
+            // Render dummy enemy first if enabled
+            if (dummyEnemyEnabled && dummyEnemy) {
+                ctx.fillStyle = dummyEnemy.color;
+                ctx.globalAlpha = 0.6;
+                ctx.beginPath();
+                ctx.arc(dummyEnemy.x, dummyEnemy.y, dummyEnemy.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+                
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(dummyEnemy.x, dummyEnemy.y, dummyEnemy.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Label
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('DUMMY', dummyEnemy.x, dummyEnemy.y);
+            }
+            
+            enemies.forEach(enemy => {
+                // Enemy body
+                ctx.fillStyle = enemy.color;
+                ctx.globalAlpha = 0.8;
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+                
+                // Enemy outline
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // HP bar
+                const hpPercent = enemy.hp / enemy.maxHp;
+                const barWidth = enemy.radius * 2;
+                const barHeight = 4;
+                const barX = enemy.x - enemy.radius;
+                const barY = enemy.y - enemy.radius - 8;
+                
+                ctx.fillStyle = '#333';
+                ctx.fillRect(barX, barY, barWidth, barHeight);
+                ctx.fillStyle = hpPercent > 0.5 ? '#4ecdc4' : (hpPercent > 0.25 ? '#ffd93d' : '#ff6b6b');
+                ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
+            });
+        }
+
+        // Update stats display
+        function updateStatsDisplay() {
+            // Update health bar
+            const healthPercent = (player.health / player.stats.maxHealth) * 100;
+            document.getElementById('healthFill').style.width = healthPercent + '%';
+            document.getElementById('healthText').textContent = 
+                Math.floor(player.health) + ' / ' + player.stats.maxHealth;
+            
+            // Update stats
+            document.getElementById('stat-moveSpeed').textContent = player.stats.moveSpeed.toFixed(1);
+            document.getElementById('stat-focusSpeed').textContent = player.stats.focusSpeed.toFixed(1);
+            document.getElementById('stat-damage').textContent = player.stats.damage.toFixed(0);
+            document.getElementById('stat-attackSpeed').textContent = player.stats.attackSpeed.toFixed(2) + 'x';
+            document.getElementById('stat-projectileCount').textContent = player.stats.projectileCount;
+            document.getElementById('stat-armor').textContent = player.stats.armor.toFixed(0) + '%';
+            document.getElementById('stat-healthRegen').textContent = player.stats.healthRegen.toFixed(1) + '/s';
+            document.getElementById('stat-pickupRange').textContent = player.stats.pickupRange.toFixed(0);
+            document.getElementById('stat-critChance').textContent = (player.stats.critChance * 100).toFixed(1) + '%';
+            
+            // Update spell card stats
+            document.getElementById('stat-spellDamage').textContent = spellCard.damage;
+            document.getElementById('stat-spellUses').textContent = spellCard.currentUses + ' / ' + spellCard.maxUses;
+            
+            // Update XP bar
+            const xpPercent = (playerXP / xpToNextLevel) * 100;
+            document.getElementById('xpBarFill').style.width = xpPercent + '%';
+            document.getElementById('xpBarText').textContent = Math.floor(playerXP) + ' / ' + xpToNextLevel;
+            document.getElementById('levelText').textContent = 'Level ' + playerLevel;
+            
+            // Update enemy count
+            document.getElementById('enemyCount').textContent = enemies.length;
+            
+            // Update bullet count
+            document.getElementById('bulletCount').textContent = bullets.length;
+            
+            // Update spell card meter
+            const chargePercent = (spellCard.currentCharge / spellCard.maxCharge) * 100;
+            document.getElementById('spellCardFill').style.width = chargePercent + '%';
+            
+            // Show icon when player has charges available
+            const icon = document.getElementById('spellCardIcon');
+            if (spellCard.currentUses > 0) {
+                icon.style.display = 'flex';
+                // Update icon text to show charge count
+                icon.textContent = spellCard.currentUses > 1 ? spellCard.currentUses : '⭐';
+            } else {
+                icon.style.display = 'none';
+            }
+            
+            // Update stat editor
+            updateStatEditor();
+            updateWeaponUpgradePanel();
+        }
+
+        // Update weapon upgrade panel
+        function updateWeaponUpgradePanel() {
+            const content = document.getElementById('weaponUpgradeContent');
+            if (!content) return;
+            
+            let html = '';
+            
+            // Only show if player has weapons
+            if (playerWeapons.length === 0) {
+                html = '<div style="color: #888; text-align: center; padding: 20px;">No weapons unlocked yet</div>';
+            } else {
+                playerWeapons.forEach(weapon => {
+                    html += `<div class="upgrade-editor-section">`;
+                    html += `<div class="upgrade-editor-weapon-title">${weapon.name}</div>`;
+                    
+                    // Get all upgrades for this weapon
+                    const weaponUpgradeKeys = Object.keys(UPGRADE_POOL).filter(key => {
+                        const upgrade = UPGRADE_POOL[key];
+                        return upgrade.requiresWeapon === weapon.type;
+                    });
+                    
+                    if (weaponUpgradeKeys.length === 0) {
+                        html += '<div style="color: #666; font-size: 10px;">No specific upgrades</div>';
+                    } else {
+                        weaponUpgradeKeys.forEach(key => {
+                            const upgrade = UPGRADE_POOL[key];
+                            const upgradeValue = getWeaponUpgradeValue(weapon, key);
+                            
+                            html += `
+                                <div class="upgrade-editor-upgrade">
+                                    <div class="stat-editor-row">
+                                        <span class="stat-editor-label">${upgrade.name}:</span>
+                                        <div class="stat-editor-controls">
+                                            <button class="stat-btn" onclick="adjustWeaponUpgrade('${weapon.type}', '${key}', -1)">−</button>
+                                            <span class="stat-editor-value">${upgradeValue}</span>
+                                            <button class="stat-btn" onclick="adjustWeaponUpgrade('${weapon.type}', '${key}', 1)">+</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    html += `</div>`;
+                });
+            }
+            
+            content.innerHTML = html;
+        }
+
+        // Get weapon upgrade value
+        function getWeaponUpgradeValue(weapon, upgradeKey) {
+            // Map upgrade keys to weapon upgrade properties
+            const upgradeMap = {
+                'BASIC_SHOT_PENETRATION': 'penetration',
+                'BASIC_SHOT_SPREAD': 'spreadShot',
+                'SHURIKEN_SPLIT': 'splitOnHit',
+                'SHURIKEN_BOUNCE': 'bounceCount',
+                'MAGIC_MISSILE_HOMING': 'homingStrength',
+                'LIGHTNING_CHAIN_RANGE': 'chainRange',
+                'FIREBALL_EXPLOSION': 'explosionRadius',
+                'ORBIT_SPEED': 'orbitSpeed',
+                'LASER_WIDTH': 'beamWidth'
+            };
+            
+            const upgradeProp = upgradeMap[upgradeKey];
+            if (upgradeProp && weapon.upgrades && weapon.upgrades[upgradeProp] !== undefined) {
+                return weapon.upgrades[upgradeProp];
+            }
+            return 0;
+        }
+
+        // Adjust weapon upgrade
+        function adjustWeaponUpgrade(weaponType, upgradeKey, amount) {
+            const weapon = playerWeapons.find(w => w.type === weaponType);
+            if (!weapon) return;
+            
+            // Apply the upgrade
+            if (amount > 0) {
+                // Add upgrade
+                const upgrade = UPGRADE_POOL[upgradeKey];
+                if (upgrade) {
+                    upgrade.apply();
+                }
+            } else {
+                // Remove upgrade (reverse the effect)
+                const upgradeMap = {
+                    'BASIC_SHOT_PENETRATION': 'penetration',
+                    'BASIC_SHOT_SPREAD': 'spreadShot',
+                    'SHURIKEN_SPLIT': 'splitOnHit',
+                    'SHURIKEN_BOUNCE': 'bounceCount',
+                    'MAGIC_MISSILE_HOMING': 'homingStrength',
+                    'LIGHTNING_CHAIN_RANGE': 'chainRange',
+                    'FIREBALL_EXPLOSION': 'explosionRadius',
+                    'ORBIT_SPEED': 'orbitSpeed',
+                    'LASER_WIDTH': 'beamWidth'
+                };
+                
+                const upgradeProp = upgradeMap[upgradeKey];
+                if (upgradeProp && weapon.upgrades) {
+                    weapon.upgrades[upgradeProp] = Math.max(0, (weapon.upgrades[upgradeProp] || 0) - 1);
+                }
+            }
+            
+            updateStatsDisplay();
+        }
+
+        // Update stat editor panel
+        function updateStatEditor() {
+            const content = document.getElementById('statEditorContent');
+            if (!content) return;
+            
+            let html = '';
+            
+            // Player stats
+            html += '<div class="stat-editor-category">Player Stats</div>';
+            
+            const playerStatsToEdit = [
+                { key: 'moveSpeed', label: 'Move Speed', step: 0.5 },
+                { key: 'focusSpeed', label: 'Focus Speed', step: 0.5 },
+                { key: 'damage', label: 'Damage', step: 5 },
+                { key: 'attackSpeed', label: 'Attack Speed', step: 0.1 },
+                { key: 'projectileCount', label: 'Projectiles', step: 1 },
+                { key: 'maxHealth', label: 'Max Health', step: 10 },
+                { key: 'armor', label: 'Armor', step: 5 },
+                { key: 'healthRegen', label: 'Health Regen', step: 0.5 },
+                { key: 'pickupRange', label: 'Pickup Range', step: 10 },
+                { key: 'critChance', label: 'Crit Chance', step: 0.05 },
+                { key: 'critDamage', label: 'Crit Damage', step: 0.1 }
+            ];
+            
+            playerStatsToEdit.forEach(stat => {
+                const value = player.stats[stat.key];
+                html += `
+                    <div class="stat-editor-row">
+                        <span class="stat-editor-label">${stat.label}:</span>
+                        <div class="stat-editor-controls">
+                            <button class="stat-btn" onclick="adjustPlayerStat('${stat.key}', -${stat.step})">−</button>
+                            <span class="stat-editor-value">${value.toFixed(stat.step < 1 ? 2 : 0)}</span>
+                            <button class="stat-btn" onclick="adjustPlayerStat('${stat.key}', ${stat.step})">+</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // Weapon upgrades - only show for unlocked weapons
+            playerWeapons.forEach(weapon => {
+                html += `<div class="weapon-editor-section">`;
+                html += `<div class="weapon-editor-title">${weapon.name}</div>`;
+                
+                const weaponStatsToEdit = [
+                    { key: 'baseDamage', label: 'Damage', step: 5 },
+                    { key: 'baseSpeed', label: 'Speed', step: 1 },
+                    { key: 'baseCooldown', label: 'Cooldown', step: 0.1 },
+                    { key: 'piercing', label: 'Piercing', step: 1 },
+                    { key: 'level', label: 'Level', step: 1 }
+                ];
+                
+                weaponStatsToEdit.forEach(stat => {
+                    const value = weapon[stat.key];
+                    html += `
+                        <div class="stat-editor-row">
+                            <span class="stat-editor-label">${stat.label}:</span>
+                            <div class="stat-editor-controls">
+                                <button class="stat-btn" onclick="adjustWeaponStat('${weapon.type}', '${stat.key}', -${stat.step})">−</button>
+                                <span class="stat-editor-value">${value.toFixed(stat.step < 1 ? 2 : 0)}</span>
+                                <button class="stat-btn" onclick="adjustWeaponStat('${weapon.type}', '${stat.key}', ${stat.step})">+</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `</div>`;
+            });
+            
+            content.innerHTML = html;
+        }
+
+        // Adjust player stat
+        function adjustPlayerStat(statKey, amount) {
+            player.stats[statKey] = Math.max(0, player.stats[statKey] + amount);
+            if (statKey === 'maxHealth') {
+                player.health = Math.min(player.health, player.stats.maxHealth);
+            }
+            updateStatsDisplay();
+        }
+
+        // Adjust weapon stat
+        function adjustWeaponStat(weaponType, statKey, amount) {
+            const weapon = playerWeapons.find(w => w.type === weaponType);
+            if (weapon) {
+                weapon[statKey] = Math.max(0, weapon[statKey] + amount);
+                updateStatsDisplay();
+            }
+        }
+
+        // Input state
+        const keys = {
+            w: false,
+            a: false,
+            s: false,
+            d: false,
+            ArrowUp: false,
+            ArrowLeft: false,
+            ArrowDown: false,
+            ArrowRight: false,
+            shift: false
+        };
+
+        // Event listeners for keyboard input
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            
+            // Handle shift separately
+            if (e.key === 'Shift') {
+                keys.shift = true;
+                e.preventDefault();
+                return;
+            }
+            
+            if (keys.hasOwnProperty(key)) {
+                keys[key] = true;
+                e.preventDefault();
+            }
+            
+            // Test damage with 'H' key
+            if (key === 'h') {
+                player.takeDamage(15);
+                updateStatsDisplay();
+            }
+            
+            // Activate spell card with Space
+            if (e.key === ' ') {
+                activateSpellCard();
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            
+            // Handle shift separately
+            if (e.key === 'Shift') {
+                keys.shift = false;
+                e.preventDefault();
+                return;
+            }
+            
+            if (keys.hasOwnProperty(key)) {
+                keys[key] = false;
+                e.preventDefault();
+            }
+        });
+
+        // Click on canvas to activate spell card
+        canvas.addEventListener('click', () => {
+            activateSpellCard();
+        });
+
+        // Update player position based on input
+        function updatePlayer() {
+            // Determine movement direction
+            let dx = 0;
+            let dy = 0;
+
+            if (keys.w || keys.ArrowUp) dy -= 1;
+            if (keys.s || keys.ArrowDown) dy += 1;
+            if (keys.a || keys.ArrowLeft) dx -= 1;
+            if (keys.d || keys.ArrowRight) dx += 1;
+
+            // Check if player is moving
+            player.isMoving = (dx !== 0 || dy !== 0);
+
+            // Activate graze mode when stopped OR when in focus mode
+            if (!player.isMoving || keys.shift) {
+                player.isGrazing = true;
+            } else {
+                player.isGrazing = false;
+            }
+
+            // Normalize diagonal movement
+            if (dx !== 0 && dy !== 0) {
+                dx *= Math.sqrt(0.5);
+                dy *= Math.sqrt(0.5);
+            }
+
+            // Apply focus (slow movement when Shift is held)
+            const currentSpeed = keys.shift ? player.stats.focusSpeed : player.stats.moveSpeed;
+
+            // Update velocity
+            player.vx = dx * currentSpeed;
+            player.vy = dy * currentSpeed;
+
+            // Update position
+            player.x += player.vx;
+            player.y += player.vy;
+
+            // Boundary collision
+            const margin = player.radius;
+            if (player.x - margin < 0) player.x = margin;
+            if (player.x + margin > GAME_WIDTH) player.x = GAME_WIDTH - margin;
+            if (player.y - margin < 0) player.y = margin;
+            if (player.y + margin > GAME_HEIGHT) player.y = GAME_HEIGHT - margin;
+            
+            // Update invulnerability
+            if (player.isInvulnerable) {
+                player.invulnerabilityTimer -= 1/60; // assuming 60fps
+                if (player.invulnerabilityTimer <= 0) {
+                    player.isInvulnerable = false;
+                }
+            }
+            
+            // Health regeneration
+            if (player.stats.healthRegen > 0 && player.health < player.stats.maxHealth) {
+                player.heal(player.stats.healthRegen / 60); // per frame
+            }
+            
+            // Spell card charging - only charge if not at max charges
+            if (spellCard.currentUses < spellCard.maxUses) {
+                spellCard.currentCharge += spellCard.chargeRate / 60;
+                if (spellCard.currentCharge >= spellCard.maxCharge) {
+                    // Bar is full - give a charge
+                    spellCard.currentUses++;
+                    console.log(`Spell charge gained! (${spellCard.currentUses}/${spellCard.maxUses})`);
+                    
+                    // If still not at max, reset bar to keep charging
+                    // Otherwise keep bar full
+                    if (spellCard.currentUses < spellCard.maxUses) {
+                        spellCard.currentCharge = 0;
+                    }
+                }
+            }
+            
+            // Update spell card effect
+            if (spellCard.isActive) {
+                spellCard.effectTimer -= 1/60;
+                if (spellCard.effectTimer <= 0) {
+                    spellCard.isActive = false;
+                }
+            }
+        }
+
+        // Render everything
+        function render() {
+            // Clear canvas
+            ctx.fillStyle = '#0f0f1e';
+            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+            // Render bullets (behind everything)
+            renderBullets();
+
+            // Render XP orbs
+            renderXPOrbs();
+
+            // Render player projectiles
+            renderPlayerProjectiles();
+
+            // Render enemies
+            renderEnemies();
+
+            // Draw player outer circle
+            ctx.fillStyle = player.color;
+            ctx.globalAlpha = player.isInvulnerable ? 0.3 : 0.6; // Flash when invulnerable
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+            
+            // Glow when spell card charges are available
+            if (spellCard.currentUses > 0) {
+                ctx.strokeStyle = '#ffd60a';
+                ctx.lineWidth = 3;
+                ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 200) * 0.3;
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, player.radius + 5, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            }
+
+            // Draw player hitbox (changes based on graze state)
+            if (player.isGrazing) {
+                // Graze mode: smaller hitbox with yellow color
+                ctx.fillStyle = player.grazeHitboxColor;
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, GRAZE_HITBOX_RADIUS, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add pulsing glow effect for graze
+                ctx.strokeStyle = player.grazeHitboxColor;
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = 0.4;
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, GRAZE_HITBOX_RADIUS + 2, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            } else {
+                // Normal mode: regular hitbox
+                ctx.fillStyle = player.hitboxColor;
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, HITBOX_RADIUS, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw focus indicator when shift is held
+            if (keys.shift) {
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = 0.3;
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, player.radius + 5, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            }
+            
+            // Draw spell card effect
+            if (spellCard.isActive) {
+                const progress = 1 - (spellCard.effectTimer / spellCard.effectDuration);
+                ctx.strokeStyle = '#ffd60a';
+                ctx.lineWidth = 3;
+                ctx.globalAlpha = 0.7 * (1 - progress);
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, spellCard.radius * progress, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        // Main game loop
+        function gameLoop() {
+            if (!isPaused) {
+                updatePlayer();
+                updateEnemies();
+                updateBullets();
+                updateWeapons();
+                updatePlayerProjectiles();
+                updateXPOrbs();
+            }
+            render();
+            updateStatsDisplay();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start the game
+        updateStatsDisplay(); // Initial display
+        addWeapon('BASIC_SHOT'); // Give player starting weapon
+        gameLoop();
+    </script>
+</body>
+</html>
